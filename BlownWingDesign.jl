@@ -253,6 +253,14 @@ function main(;disp_plot = true)
                 xlabel("Simulation time")
                 ylabel("Angular velocity")
 
+                figure(figname*"_4", figsize=[7*2, 5*1]*figsize_factor)
+                subplot(121)
+                xlabel("Simulation time")
+                ylabel("Total Force")
+                subplot(122)
+                xlabel("Simulation time")
+                ylabel("Force per unit span")
+
             end
 
             if PFIELD.nt!=0 && PFIELD.nt%nsteps_plot==0 && disp_plot
@@ -263,8 +271,8 @@ function main(;disp_plot = true)
                 Ftot = uns.calc_aerodynamicforce(mainwing, prev_wing, PFIELD, Vinf, DT,
                                                                 rhoinf; t=PFIELD.t)
                 # Add Forces to forces vector
-
-                push!(Forces_wing, Ftot);
+                resultant_Force = sqrt(Ftot[1]^2 + Ftot[2]^2 + Ftot[3]^2);  #Resultnat vector
+                push!(Forces_wing, restultant_Force);
                 L, D, S = uns.decompose(Ftot, [0,0,1], [-1,0,0]);
                 vlm._addsolution(mainwing, "L", L)
                 vlm._addsolution(mainwing, "D", D)
@@ -279,7 +287,8 @@ function main(;disp_plot = true)
                 l, d, s = uns.decompose(ftot, [0,0,1], [-1,0,0]);
 
                 # Add Force/span to f vector
-                push!(forces_per_span, ftot);
+                resultant_force = sqrt(ftot[1]^2 + ftot[2]^2 + ftot[3]^2);
+                push!(forces_per_span, resultant_force);
                 # Lift of the wing
                 Lwing = norm(sum(L))
                 CLwing = Lwing/(qinf*b^2/ar)
@@ -342,6 +351,16 @@ function main(;disp_plot = true)
                 plot([sim.t], [sim.vehicle.W[2]], ".g", label=L"\Omega_y", alpha=0.5)
                 plot([sim.t], [sim.vehicle.W[3]], ".b", label=L"\Omega_z", alpha=0.5)
                 if PFIELD.nt==1; legend(loc="best", frameon=false); end;
+
+                #ADDED CODE HERE.
+                #The forces aren't coming through, and I don't know why.
+
+                figure(figname*"_4")
+                subplot(121)
+                plot([sim.t], resltant_Force, label="Total forces on wing", alpha = 0.5)
+                subplot(122)
+                plot([sim.t], ftot[1],label = "Force per unit span", alpha = 0.5)
+
             end
 
             prev_wing = deepcopy(mainwing)
@@ -418,26 +437,28 @@ println(Forces_wing)    #This is not being added to. Is it a problem with it as 
 FirstForce = zeros();            #Empty Tuple
 
 Forces_wing = insert!(Forces_wing,1,FirstForce);     #add azero to the start
+
+println(Forces_wing(1));
 #FROM WHAT I UNDERSTNAD, THESE PLOTS ARE DONE, WITHOUT LABELS
 #Plots of Forces
 #Forces_wing is a very convoluted vector. It is a tuple.
-figure("Forces")
-subplot(211)
-plot(time_vec, Forces_wing[:,1])
-xlabel("Time(s)");
-ylabel("Force")
-subplot(212)
-plot(time_vec, forces_per_span[:,1]);
-xlabel("Time(s)")
-ylabel("Force")
-
-#Plots of lift
-figure("Lift")
-subplot(211)
-plot(time_vec, cl_wing);
-xlabel("time (s)");
-ylabel("cL")
-subplot(212)
-plot(time_vec, L_wing, label = cl);
-xlabel("time(s)")
-ylabel("L")
+# figure("Forces")
+# subplot(211)
+# plot(time_vec, Forces_wing[:,1])
+# xlabel("Time(s)");
+# ylabel("Force")
+# subplot(212)
+# plot(time_vec, forces_per_span[:,1]);
+# xlabel("Time(s)")
+# ylabel("Force")
+#
+# #Plots of lift
+# figure("Lift")
+# subplot(211)
+# plot(time_vec, cl_wing);
+# xlabel("time (s)");
+# ylabel("cL")
+# subplot(212)
+# plot(time_vec, L_wing, label = cl);
+# xlabel("time(s)")
+# ylabel("L")
