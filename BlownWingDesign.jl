@@ -7,6 +7,9 @@ using PyPlot
 using LinearAlgebra: norm, dot, cross
 using LaTeXStrings                      #Need for setting up plots
 
+FLOWUnsteady.vlm.VLMSolver._mute_warning(true)
+#Mute the warnings
+
 # velocities = [];       # Total Velocity over wing
 
 
@@ -254,12 +257,22 @@ function main(;disp_plot = true)
                 ylabel("Angular velocity")
 
                 figure(figname*"_4", figsize=[7*2, 5*1]*figsize_factor)
-                subplot(121)
+                subplot(311)
+                ylabel("Lift Force")
+                subplot(312)
+                ylabel("Drag Force")
+                subplot(313)
                 xlabel("Simulation time")
-                ylabel("Total Force")
-                subplot(122)
+                ylabel("Side Force")
+
+                figure(figname*"_5", figsize = [7*2, 5*1]*figsize_factor)
+                subplot(311)
+                ylabel("Lift Force")
+                subplot(312)
+                ylabel("Drag Force")
+                subplot(313)
                 xlabel("Simulation time")
-                ylabel("Force per unit span")
+                ylabel("Side Force")
 
             end
 
@@ -271,24 +284,32 @@ function main(;disp_plot = true)
                 Ftot = uns.calc_aerodynamicforce(mainwing, prev_wing, PFIELD, Vinf, DT,
                                                                 rhoinf; t=PFIELD.t)
                 # Add Forces to forces vector
-                resultant_Force = sqrt(Ftot[1]^2 + Ftot[2]^2 + Ftot[3]^2);  #Resultnat vector
-                push!(Forces_wing, restultant_Force);
+    #PROBLEM AREA
+                Fx = [v[1] for v in Ftot]
+                Fy = [v[2] for v in Ftot]
+                Fz = [v[3] for v in Ftot]
+                # resultant_Force = [sum(Fx), sum(Fy), sum(Fz)];
+                # resultant_Force = sqrt(sum(Ftot[[[[:,1],1],1],1])^2 + sum(Ftot[[[[:,2],1],1],1])^2 + sum(Ftot[[[[:,3],1],1],1])^2);  #Resultnat vector
                 L, D, S = uns.decompose(Ftot, [0,0,1], [-1,0,0]);
                 vlm._addsolution(mainwing, "L", L)
                 vlm._addsolution(mainwing, "D", D)
                 vlm._addsolution(mainwing, "S", S)
+                resultant_Force = [sum(Fx),sum(Fy),sum(Fz)]
+                push!(Forces_wing, resultant_Force);
 
                 # #Add Lift to lift vector
                 push!(L_wing, L);
 
                 # Force per unit span at each VLM element
+
                 ftot = uns.calc_aerodynamicforce(mainwing, prev_wing, PFIELD, Vinf, DT,
                                             rhoinf; t=PFIELD.t, per_unit_span=true);
                 l, d, s = uns.decompose(ftot, [0,0,1], [-1,0,0]);
-
+                # println(ftot)
+                # resultant_force
                 # Add Force/span to f vector
-                resultant_force = sqrt(ftot[1]^2 + ftot[2]^2 + ftot[3]^2);
-                push!(forces_per_span, resultant_force);
+                # resultant_force = sqrt(ftot[1,1]^2 + ftot[2,1]^2 + ftot[3,1]^2);
+                # push!(forces_per_span, resultant_force);
                 # Lift of the wing
                 Lwing = norm(sum(L))
                 CLwing = Lwing/(qinf*b^2/ar)
@@ -356,10 +377,22 @@ function main(;disp_plot = true)
                 #The forces aren't coming through, and I don't know why.
 
                 figure(figname*"_4")
-                subplot(121)
-                plot([sim.t], resltant_Force, label="Total forces on wing", alpha = 0.5)
-                subplot(122)
-                plot([sim.t], ftot[1],label = "Force per unit span", alpha = 0.5)
+                cla()
+                subplot(311)
+                plot([sim.t], [sum(Fx)], label="Lift forces on wing", alpha = 0.5, color = clr)
+                subplot(312)
+                plot([sim.t], [sum(Fy)], label="Drag forces on wing", alpha = 0.5, color = clr)
+                subplot(313)
+                plot([sim.t], [sum(Fz)], label="Side forces on wing", alpha = 0.5, color = clr)
+
+                figure(figname*"_5")
+                cla()
+                subplot(311)
+                plot(y2b, l,label = "Lift per unit span", alpha = 0.5, color = clr)
+                subplot(312)
+                plot(y2b, d, label = "Drag per unit span", alpha = 0.5, color = clr)
+                subplot(313)
+                plot(y2b, s, label = "Side force per unit span", alpha = 0.5, color = clr)
 
             end
 
@@ -419,46 +452,12 @@ function main(;disp_plot = true)
     #   can use later. This is how you get these values for the wing.
 
     #Example of monitor function starts on line 199 of heavingwing.jl
+    dt = 1/nsteps;
+    time_vec = 0:dt:1;
 
-    dt = ttot/nsteps;
-    time_vec = 0:dt:ttot;
 
     return cD_wing,cL_wing,D_wing,L_wing,time_vec,Forces_wing, forces_per_span
 
 end
 
 cD_wing,cL_wing,D_wing,L_wing,time_vec, Forces_wing, forces_per_span = main()
-
-#
-println(time_vec)
-println(Forces_wing)    #This is not being added to. Is it a problem with it as a global variable?
-                        #Can Julia push into this array in the function, then print it here?
-
-FirstForce = zeros();            #Empty Tuple
-
-Forces_wing = insert!(Forces_wing,1,FirstForce);     #add azero to the start
-
-println(Forces_wing(1));
-#FROM WHAT I UNDERSTNAD, THESE PLOTS ARE DONE, WITHOUT LABELS
-#Plots of Forces
-#Forces_wing is a very convoluted vector. It is a tuple.
-# figure("Forces")
-# subplot(211)
-# plot(time_vec, Forces_wing[:,1])
-# xlabel("Time(s)");
-# ylabel("Force")
-# subplot(212)
-# plot(time_vec, forces_per_span[:,1]);
-# xlabel("Time(s)")
-# ylabel("Force")
-#
-# #Plots of lift
-# figure("Lift")
-# subplot(211)
-# plot(time_vec, cl_wing);
-# xlabel("time (s)");
-# ylabel("cL")
-# subplot(212)
-# plot(time_vec, L_wing, label = cl);
-# xlabel("time(s)")
-# ylabel("L")
