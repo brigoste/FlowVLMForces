@@ -182,6 +182,7 @@ function main(;disp_plot = true)
     D_wing = [];           # Effective drag over wing.
     y2b_vec = [];
     CdCD_vec = [];
+    Gamma_vec = [];
     dt = 0;
     Time = 0;
     nsteps = 300;
@@ -258,7 +259,7 @@ function main(;disp_plot = true)
                 y2b = 2*mainwing._ym/b
                 # y2b = sum(y2b)             #sums each part of the the forces over the wing.
                 push!(y2b_vec, y2b)
-
+                push!(Gamma_vec, mainwing.sol["Gamma"])
 
                 # subplot(221)
                 # # plot(web_2yb, web_ClCL, "ok", label="Weber's experimental data")
@@ -368,11 +369,11 @@ function main(;disp_plot = true)
     dt = 1/nsteps;
     time_vec = dt:dt:1;
 
-    return cD_wing,cL_wing,D_wing,L_wing,time_vec,Forces_wing,forces_per_span, y2b_vec, CdCD_vec, mainwing
+    return cD_wing,cL_wing,D_wing,L_wing,time_vec,Forces_wing,forces_per_span, y2b_vec, CdCD_vec, mainwing, wake_coupled, Gamma_vec
 end
 
 function plot_Data(cD_wing, cL_wing, D_wing, L_wing, time_vec, Forces_wing,
-    forces_per_span, y2b_vec, CdCD_vec, mainwing, figname = "monitor_plot",
+    forces_per_span, y2b_vec, CdCD_vec, mainwing, wake_coupled, Gamma_vec, figname = "monitor_plot",
     figsize_factor = 1)
     #Goal, put all plotting here. clear from main.
     #make sure all variables you need are sent here as well.
@@ -399,21 +400,21 @@ function plot_Data(cD_wing, cL_wing, D_wing, L_wing, time_vec, Forces_wing,
     subplot(223)
     xlabel("Simulation time (s)")
     ylabel(L"Lift Coefficient $C_L$")
-    ylim([0,1]);
+    ylim([0,10]);
 
     subplot(224)
     xlabel("Simulation time (s)")
     ylabel(L"Drag Coefficient $C_D$")
     ylim([0,0.1]);
 
-    # figure(figname*"_2", figsize=[7*2, 5*1]*figsize_factor)
-    # cla()
-    # subplot(121)
-    # xlabel(L"$\frac{2y}{b}$")
-    # ylabel(L"Circulation $\Gamma$")
-    # subplot(122)
-    # xlabel(L"$\frac{2y}{b}$")
-    # ylabel(L"Effective velocity $V_\infty$")
+    figure(figname*"_2", figsize=[7*2, 5*1]*figsize_factor)
+    cla()
+    subplot(121)
+    xlabel(L"$\frac{2y}{b}$")
+    ylabel(L"Circulation $\Gamma$")
+    subplot(122)
+    xlabel(L"$\frac{2y}{b}$")
+    ylabel(L"Effective velocity $V_\infty$")
     #
     # figure(figname*"_3", figsize=[7*2, 5*1]*figsize_factor)
     # cla()
@@ -454,68 +455,81 @@ function plot_Data(cD_wing, cL_wing, D_wing, L_wing, time_vec, Forces_wing,
     #We are stuck on the third subplot
 
     #Plot data on figure
-    size = length(y2b_vec);
+    size = length(y2b_vec[1]);
 
     figure(figname)
     subplot(221)
-    # println(size)
-    # println(cL_wing[1])
-    # println(size(y2b_vec))
     for i = 1:size
-        plot(y2b_vec[i], cL_wing[i], "-", label="FLOWVLM", alpha=0.5)
+        aux = (i/size);
+        clr = (1-aux, 0, aux)
+        plot(y2b_vec[i], cL_wing[i], "-", label="FLOWVLM", alpha=0.5, color = clr)
     end
-    #add color = clr
 
-    println("Passed Figure 1")
-
-# println(CdCD_vec)
     subplot(222)
     for i = 1:size
-        plot(y2b_vec[i], CdCD_vec[i], "-", label="FLOWVLM", alpha=0.5)
-        #add color = clr
+        aux = (i/size);
+        clr = (1-aux, 0, aux)
+        plot(y2b_vec[i], CdCD_vec[i], "-", label="FLOWVLM", alpha=0.5, color = clr)
     end
-    println("Passed Figure 2")
 
-
-# println(time_vec)
-# println(size(cL_wing))
-
-    size = size(time_vec[1])
     subplot(223)
+    size = length(time_vec)
     for i = 1:size
-        plot(time_vec[i], sum(cL_wing[i]), "o", label="FLOWVLM", alpha=0.5)
+        aux = (i/size);
+        # clr = (1-aux, aux, 1+aux)
+        clr = (aux, 0, 1-aux)
+        # println((time_vec[i]))
+        # println(norm(sum(cL_wing[:,i])))
+        plot(time_vec[i], norm(sum(cL_wing[i,:])), "o", label="FLOWVLM", alpha=0.5, color=clr)
     end
-    #add color = clr
-    println("Passed Figure 3")
-    #
-    # subplot(224)
-    # scatter(time_vec, cD_wing, "o", label="FLOWVLM", alpha=0.5)
-    # #add color = clr
-    # println("Passed Figure 4")
 
-    "Graphs 3 and 4 work well, 1 and 2 need work."
+    subplot(224)
+    for i = 1:size
+        aux = (i/size);
+        clr = (aux, 0, 1-aux);
+        plot(time_vec[i], norm(sum(cD_wing[i,:])), "o", label="FLOWVLM", alpha=0.5, color = clr)
+    end
+
+
+    # "Graphs 1 and 2 work well (fix colors), 3 and 4 need work."
 
     #Problem with this figure.
     # println(size(y2b_vec))                #size = 300
     # println(size(mainwing.sol["Gamma"]))  #size = 40
     #
-    # figure(figname*"_2")
-    # subplot(121)
-    # plot(y2b_vec, mainwing.sol["Gamma"], "-", label="FLOWVLM", alpha=0.5)
+    # println(length(y2b_vec[1]))
+    # println(length(mainwing.sol["Gamma"]))
+    # println(mainwing.sol["Gamma"])
+
+    size = length(Gamma_vec[1])
+    "y2b_vec"
+    println("y2b_vec: ", length(y2b_vec))
+    "1 Set of Gamma_vec"
+    println("1 set of Gamma_vec: ", length(Gamma_vec))
+    figure(figname*"_2")
+    subplot(121)
+    #Problem with Graphing here.
+
+    for i = 1:size
+        plot(y2b_vec, Gamma_vec[:,i], "-", label="FLOWVLM", alpha=0.5)
+    end
+
     # println("Passed Figure 5")
-    # #add color = clr
-    # #Figure this one out. We may only need the wake_coupled part, which may need to be passed.
-    # if wake_coupled && PFIELD.nt!=0
-    #     subplot(122)
-    #     plot(y2b_vec, norm.(mainwing.sol["Vkin"])/magVinf, "-", label="FLOWVLM", alpha=0.5)
-    #     #add color = [clr[1], 1, clr[3]]
-    #     if VehicleType==uns.VLMVehicle
-    #         plot(y2b_vec, norm.(mainwing.sol["Vvpm"]), "-", label="FLOWVLM", alpha=0.5)
-    #         #add color = clr
-    #     end
-    #     plot(y2b_vec, [norm(Vinf(vlm.getControlPoint(mainwing, i), T)) for i in 1:vlm.get_m(mainwing)],
-    #                                                 "-k", label="FLOWVLM", alpha=0.5)
-    # end
+    #add color = clr
+    #Figure this one out. We may only need the wake_coupled part, which may need to be passed.
+    if wake_coupled
+        subplot(122)
+        for i = 1:size
+            plot(y2b_vec, norm.(mainwing.sol["Vkin"])/magVinf, "-", label="FLOWVLM", alpha=0.5)
+            #add color = [clr[1], 1, clr[3]]
+            if VehicleType==uns.VLMVehicle
+                plot(y2b_vec, norm.(mainwing.sol["Vvpm"]), "-", label="FLOWVLM", alpha=0.5)
+                #add color = clr
+            end
+            plot(y2b_vec, [norm(Vinf(vlm.getControlPoint(mainwing, i), T)) for i in 1:vlm.get_m(mainwing)],
+                                                        "-k", label="FLOWVLM", alpha=0.5)
+        end
+    end
     #
     # figure(figname*"_3")
     # subplot(121)
@@ -577,8 +591,8 @@ function plot_Data(cD_wing, cL_wing, D_wing, L_wing, time_vec, Forces_wing,
 end
 
 
-cD_wing,cL_wing,D_wing,L_wing,time_vec,Forces_wing,forces_per_span, y2b_vec, CdCD_vec, mainwing = main()
+cD_wing,cL_wing,D_wing,L_wing,time_vec,Forces_wing,forces_per_span, y2b_vec, CdCD_vec, mainwing, wake_coupled, Gamma_vec = main()
 
 if disp_plot == true
-    plot_Data(cD_wing, cL_wing, D_wing, L_wing, time_vec, Forces_wing, forces_per_span, y2b_vec, CdCD_vec, mainwing)
+    plot_Data(cD_wing, cL_wing, D_wing, L_wing, time_vec, Forces_wing, forces_per_span, y2b_vec, CdCD_vec, mainwing, wake_coupled, Gamma_vec)
 end
