@@ -183,6 +183,8 @@ function main(;disp_plot = true)
     y2b_vec = [];
     CdCD_vec = [];
     Gamma_vec = [];
+    V_vec = [];
+    W_vec = [];
     dt = 0;
     Time = 0;
     nsteps = 300;
@@ -261,36 +263,7 @@ function main(;disp_plot = true)
                 push!(y2b_vec, y2b)
                 push!(Gamma_vec, mainwing.sol["Gamma"])
 
-                # subplot(221)
-                # # plot(web_2yb, web_ClCL, "ok", label="Weber's experimental data")
-                # plot(y2b, ClCL, "-", label="FLOWVLM", alpha=0.5)
-                # color = clr
-                #
-                # subplot(222)
-                # # plot(web_2yb, web_CdCD, "ok", label="Weber's experimental data")
-                # plot(y2b, CdCD, "-", label="FLOWVLM", alpha=0.5, color=clr)
-                #
-                # subplot(223)
-                # # plot([0, T], web_CL*ones(2), ":k", label="Weber's experimental data")
-                # plot([T], [CLwing], "o", label="FLOWVLM", alpha=0.5, color=clr)
-                #
-                # subplot(224)
-                # # plot([0, T], web_CD*ones(2), ":k", label="Weber's experimental data")
-                # plot([T], [CDwing], "o", label="FLOWVLM", alpha=0.5, color=clr)
-                #
-                # figure(figname*"_2")
-                # subplot(121)
-                # plot(y2b, mainwing.sol["Gamma"], "-", label="FLOWVLM", alpha=0.5, color=clr)
-                # if wake_coupled && PFIELD.nt!=0
-                #     subplot(122)
-                #     plot(y2b, norm.(mainwing.sol["Vkin"])/magVinf, "-", label="FLOWVLM", alpha=0.5, color=[clr[1], 1, clr[3]])
-                #     if VehicleType==uns.VLMVehicle
-                #         plot(y2b, norm.(mainwing.sol["Vvpm"]), "-", label="FLOWVLM", alpha=0.5, color=clr)
-                #     end
-                #     plot(y2b, [norm(Vinf(vlm.getControlPoint(mainwing, i), T)) for i in 1:vlm.get_m(mainwing)],
-                #                                                 "-k", label="FLOWVLM", alpha=0.5)
-                # end
-                #
+                #Need Time vecotr, V vector, and W vector for this plot
                 # figure(figname*"_3")
                 # subplot(121)
                 # plot([sim.t], [sim.vehicle.V[1]], ".r", label=L"V_x", alpha=0.5)
@@ -302,6 +275,14 @@ function main(;disp_plot = true)
                 # plot([sim.t], [sim.vehicle.W[2]], ".g", label=L"\Omega_y", alpha=0.5)
                 # plot([sim.t], [sim.vehicle.W[3]], ".b", label=L"\Omega_z", alpha=0.5)
                 # if PFIELD.nt==1; legend(loc="best", frameon=false); end;
+
+                #Add Each componnet on V to the vecotr we return
+                V = [sim.vehicle.V[1], sim.vehicle.V[2], sim.vehicle.V[3]];
+                push!(V_vec,V);
+
+                W = [sim.vehicle.W[1], sim.vehicle.W[2], sim.vehicle.W[3]];
+                push!(W_vec, W);
+
                 #
                 # #ADDED CODE HERE.
                 # #The forces aren't coming through, and I don't know why.
@@ -369,11 +350,11 @@ function main(;disp_plot = true)
     dt = 1/nsteps;
     time_vec = dt:dt:1;
 
-    return cD_wing,cL_wing,D_wing,L_wing,time_vec,Forces_wing,forces_per_span, y2b_vec, CdCD_vec, mainwing, wake_coupled, Gamma_vec
+    return cD_wing,cL_wing,D_wing,L_wing,time_vec,Forces_wing,forces_per_span, y2b_vec, CdCD_vec, mainwing, wake_coupled, Gamma_vec, V_vec, W_vec
 end
 
 function plot_Data(cD_wing, cL_wing, D_wing, L_wing, time_vec, Forces_wing,
-    forces_per_span, y2b_vec, CdCD_vec, mainwing, wake_coupled, Gamma_vec, figname = "monitor_plot",
+    forces_per_span, y2b_vec, CdCD_vec, mainwing, wake_coupled, Gamma_vec, V_vec, W_vec, figname = "monitor_plot",
     figsize_factor = 1)
     #Goal, put all plotting here. clear from main.
     #make sure all variables you need are sent here as well.
@@ -415,44 +396,38 @@ function plot_Data(cD_wing, cL_wing, D_wing, L_wing, time_vec, Forces_wing,
     subplot(122)
     xlabel(L"$\frac{2y}{b}$")
     ylabel(L"Effective velocity $V_\infty$")
-    #
-    # figure(figname*"_3", figsize=[7*2, 5*1]*figsize_factor)
-    # cla()
-    # subplot(121)
-    # xlabel("Simulation time")
-    # ylabel("Velocity")
-    # subplot(122)
-    # xlabel("Simulation time")
-    # ylabel("Angular velocity")
-    #
-    # figure(figname*"_4", figsize=[7*2, 5*1]*figsize_factor)
-    # cla()
-    # subplot(311)
-    # ylabel("Lift Force")
-    # subplot(312)
-    # ylabel("Drag Force")
-    # subplot(313)
-    # xlabel("Simulation time")
-    # ylabel("Side Force")
-    #
-    # figure(figname*"_5", figsize = [7*2, 5*1]*figsize_factor)
-    # cla()
-    # subplot(311)
-    # ylabel("Lift per unit span")
-    # subplot(312)
-    # ylabel("Drag per unit span")
-    # subplot(313)
-    # xlabel("Simulation time")
-    # ylabel("Side per unit span")
+
+    figure(figname*"_3", figsize=[7*2, 5*1]*figsize_factor)
+    cla()
+    subplot(121)
+    xlabel("Simulation time")
+    ylabel("Velocity")
+    subplot(122)
+    xlabel("Simulation time")
+    ylabel("Angular velocity")
+
+    figure(figname*"_4", figsize=[7*2, 5*1]*figsize_factor)
+    cla()
+    subplot(311)
+    ylabel("Lift Force")
+    subplot(312)
+    ylabel("Drag Force")
+    subplot(313)
+    xlabel("Simulation time")
+    ylabel("Side Force")
+    ylim([0,10])
+
+    figure(figname*"_5", figsize = [7*2, 5*1]*figsize_factor)
+    cla()
+    subplot(311)
+    ylabel("Lift per unit span")
+    subplot(312)
+    ylabel("Drag per unit span")
+    subplot(313)
+    xlabel("Simulation time")
+    ylabel("Side per unit span")
 
     #PLOTS ARE NOW MADE, LETS ADD THE POINTS
-
-    #Problem and fix
-    # Basically, time is a 301 unit vector going from 0 to 1. These 301 units show 300 intervals of time
-    # Each force is evaulated on the time interval, not the actual time. So, in order to make the vectors the
-    #   same length, I push a 0 to the first bucket of each force vector. Make sure this is ok.
-
-    #We are stuck on the third subplot
 
     #Plot data on figure
     size = length(y2b_vec[1]);
@@ -476,10 +451,7 @@ function plot_Data(cD_wing, cL_wing, D_wing, L_wing, time_vec, Forces_wing,
     size = length(time_vec)
     for i = 1:size
         aux = (i/size);
-        # clr = (1-aux, aux, 1+aux)
         clr = (aux, 0, 1-aux)
-        # println((time_vec[i]))
-        # println(norm(sum(cL_wing[:,i])))
         plot(time_vec[i], norm(sum(cL_wing[i,:])), "o", label="FLOWVLM", alpha=0.5, color=clr)
     end
 
@@ -490,41 +462,16 @@ function plot_Data(cD_wing, cL_wing, D_wing, L_wing, time_vec, Forces_wing,
         plot(time_vec[i], norm(sum(cD_wing[i,:])), "o", label="FLOWVLM", alpha=0.5, color = clr)
     end
 
-
-    # "Graphs 1 and 2 work well (fix colors), 3 and 4 need work."
-
-    #Problem with this figure.
-    # println(size(y2b_vec))                #size = 300
-    # println(size(mainwing.sol["Gamma"]))  #size = 40
-    #
-    # println(length(y2b_vec[1]))
-    # println(length(mainwing.sol["Gamma"]))
-    # println(mainwing.sol["Gamma"])
-    # println("Gamma_vec Size: ", length(Gamma_vec));
-    # size = length(Gamma_vec)
-    # println("length: ", size)
-    "y2b_vec"
-    # println("y2b_vec: ", size(y2b_vec))
-    "1 Set of Gamma_vec"
-    # println("1 set of Gamma_vec: ", length(Gamma_vec))
     figure(figname*"_2")
     subplot(121)
-    #Problem with Graphing here.
 
     for i = 1:size
-        # println(Gamma_vec[i,:])
-        # println(y2b_vec)
         cratio = i/size;
         y = Gamma_vec[i]
-        # println("y2b_vec: ",y2b_vec[i])
-        # println("y: ", y)
         clr = [cratio,0,1-cratio]
         plot(y2b_vec[i], y, "-", label="FLOWVLM", alpha=0.5, color = clr)
-        # cratio = cratio - 1;
     end
 
-    # println("Passed Figure 5")
-    #add color = clr
     #Figure this one out. We may only need the wake_coupled part, which may need to be passed.
     if wake_coupled
         subplot(122)
@@ -540,40 +487,83 @@ function plot_Data(cD_wing, cL_wing, D_wing, L_wing, time_vec, Forces_wing,
         end
     end
     #
-    # figure(figname*"_3")
-    # subplot(121)
-    # plot([sim.t], [sim.vehicle.V[1]], ".r", label=L"V_x", alpha=0.5)
-    # plot([sim.t], [sim.vehicle.V[2]], ".g", label=L"V_y", alpha=0.5)
-    # plot([sim.t], [sim.vehicle.V[3]], ".b", label=L"V_z", alpha=0.5)
-    # if PFIELD.nt==1; legend(loc="best", frameon=false); end;
-    # subplot(122)
-    # plot([sim.t], [sim.vehicle.W[1]], ".r", label=L"\Omega_x", alpha=0.5)
-    # plot([sim.t], [sim.vehicle.W[2]], ".g", label=L"\Omega_y", alpha=0.5)
-    # plot([sim.t], [sim.vehicle.W[3]], ".b", label=L"\Omega_z", alpha=0.5)
-    # if PFIELD.nt==1; legend(loc="best", frameon=false); end;
+
+    # println("V_vec[1] = ", length(V_vec));
+
+    size = length(V_vec)
+    # println("V_vec: ", size)
+    # println("W_vec: ", length(W_vec))
+    # println("t: ", length(time_vec))
+
+    figure(figname*"_3")
+    subplot(121)
+    # for i = 1:size
+    #     # println(time_vec[i], "  ", V_vec[i][1]);
+    #     # println(V_vec[i])
+    #     # plot(time_vec[i], V_vec[i], [".r",".g",".b"], label = [L"V_x", L"V_y",L"V_z",], alpha=0.5)
+    #     plot(time_vec[i], V_vec[i][1], ".r", label=L"V_x", alpha=0.5)
+    #     plot(time_vec[i], V_vec[i][2], ".g", label=L"V_y", alpha=0.5)
+    #     plot(time_vec[i], V_vec[i][3], ".b", label=L"V_z", alpha=0.5)
+    #     # if PFIELD.nt==1;
+    #     legend(loc="best", frameon=false);
+    #     # end;
+    #     subplot(122)
+    #     # println(W_vec[i])
+    #     # plot(time_vec[i], W_vec[i], [".r",".g",".b"], label=[L"\Omega_x",L"\Omega_y",L"\Omega_z"], alpha = 0.5)
+    #     plot(time_vec[i], W_vec[i][1], ".r", label=L"\Omega_x", alpha=0.5)
+    #     plot(time_vec[i], W_vec[i][2], ".g", label=L"\Omega_y", alpha=0.5)
+    #     plot(time_vec[i], W_vec[i][3], ".b", label=L"\Omega_z", alpha=0.5)
+    #     # if PFIELD.nt==1;
+    #     legend(loc="best", frameon=false);
+    #     # end;
+    # end
+    # V_x = V_vec[:][1]
+    # V_y = V_vec[2]
+    # V_z = V_vec[3]
+    # println(V_x)
+    for i = 1:size
+        # println(V_vec[i]);
+        # println(V_vec[1][1]);
+        plot(time_vec[i], (V_vec[i])[1], ".r", label=L"V_x", alpha=0.5);
+        plot(time_vec[i], (V_vec[i])[2], ".g", label=L"V_y", alpha=0.5);
+        plot(time_vec[i], (V_vec[i])[3], ".b", label=L"V_z", alpha=0.5);
+        legend(loc="best", frameon=false);
+        subplot(122)
+        plot(time_vec[i], (W_vec[i])[1], ".r", label=L"W_x", alpha=0.5);
+        plot(time_vec[i], (W_vec[i])[2], ".g", label=L"W_x", alpha=0.5);
+        plot(time_vec[i], (W_vec[i])[3], ".b", label=L"W_x", alpha=0.5);
+        legend(loc="best", frameon=false);
+    end
+
+    figure(figname*"_4")
+    size = length(time_vec)
+    for i = 1:size
+        cratio = i/size;
+        clr = [cratio,0,1-cratio];
+        # println(time_vec[i], [Forces_wing[i]][1])
+        subplot(311)
+        scatter(time_vec[i], (Forces_wing[i])[1], label="Lift forces on wing", alpha = 0.5, color = clr)
+        #add color = clr
+        subplot(312)
+        scatter(time_vec[i], (Forces_wing[i])[2], label="Drag forces on wing", alpha = 0.5, color = clr)
+        #add color = clr
+        subplot(313)
+        scatter(time_vec[i], (Forces_wing[i])[3], label="Side forces on wing", alpha = 0.5, color = clr)
+        #add color = clr
+    end
     #
-    # figure(figname*"_4")
-    # subplot(311)
-    # println(sim.t, sum(Fx))
-    # scatter(sim.t, sum(Fx), label="Lift forces on wing", alpha = 0.5)
-    # #add color = clr
-    # subplot(312)
-    # scatter(sim.t, sum(Fy), label="Drag forces on wing", alpha = 0.5)
-    # #add color = clr
-    # subplot(313)
-    # scatter(sim.t, sum(Fz), label="Side forces on wing", alpha = 0.5)
-    # #add color = clr
-    #
-    # figure(figname*"_5")
-    # subplot(311)
-    # plot(y2b_vec, fx, label = "Lift per unit span", alpha = 0.5)
-    # #add color = clr
-    # subplot(312)
-    # plot(y2b_vec, fy, label = "Drag per unit span", alpha = 0.5)
-    # #add color = clr
-    # subplot(313)
-    # plot(y2b_vec, fz, label = "Side per unit span", alpha = 0.5)
-    # #add color = clr
+    figure(figname*"_5")
+    size = length(y2b_vec)
+    for i = 1:size
+        cratio = i/size;
+        clr = [cratio,0,1-cratio];
+        subplot(311)
+        scatter(y2b_vec[i], (forces_per_span[i])[1], label = "Lift per unit span", alpha = 0.5, color = clr)
+        subplot(312)
+        plot(y2b_vec[i], (forces_per_span[i])[2], label = "Drag per unit span", alpha = 0.5, color = clr)
+        subplot(313)
+        plot(y2b_vec[i], (forces_per_span[i])[3], label = "Side per unit span", alpha = 0.5, color = clr)
+    end
     #
     # #Set save file directory
     #
@@ -600,8 +590,8 @@ function plot_Data(cD_wing, cL_wing, D_wing, L_wing, time_vec, Forces_wing,
 end
 
 
-# cD_wing,cL_wing,D_wing,L_wing,time_vec,Forces_wing,forces_per_span, y2b_vec, CdCD_vec, mainwing, wake_coupled, Gamma_vec = main()
+cD_wing,cL_wing,D_wing,L_wing,time_vec,Forces_wing,forces_per_span, y2b_vec, CdCD_vec, mainwing, wake_coupled, Gamma_vec, V_vec, W_vec = main()
 
 if disp_plot == true
-    plot_Data(cD_wing, cL_wing, D_wing, L_wing, time_vec, Forces_wing, forces_per_span, y2b_vec, CdCD_vec, mainwing, wake_coupled, Gamma_vec)
+    plot_Data(cD_wing, cL_wing, D_wing, L_wing, time_vec, Forces_wing, forces_per_span, y2b_vec, CdCD_vec, mainwing, wake_coupled, Gamma_vec, V_vec, W_vec)
 end
